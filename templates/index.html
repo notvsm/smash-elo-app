@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Smash Ultimate ELO</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+
+    <!-- Searchable Dropdown Script -->
+    <script>
+        function makeSearchable(selectEl) {
+          const wrapper = document.createElement("div");
+          wrapper.style.position = "relative";
+      
+          const input = document.createElement("input");
+          input.type = "text";
+      
+          // Show actual selected value instead of placeholder option
+          const selectedOption = selectEl.querySelector("option:checked");
+          input.value = selectedOption && selectedOption.value ? selectedOption.text : "";
+          input.placeholder = "Search...";
+          input.className = "search-input";
+      
+          const dropdown = document.createElement("div");
+          dropdown.className = "search-dropdown";
+      
+          dropdown.style.position = "absolute";
+          dropdown.style.left = "0";
+          dropdown.style.right = "0";
+          dropdown.style.background = "#2a2a2a";
+          dropdown.style.border = "1px solid #444";
+          dropdown.style.maxHeight = "150px";
+          dropdown.style.overflowY = "auto";
+          dropdown.style.display = "none";
+          dropdown.style.zIndex = "50";
+      
+          selectEl.parentNode.insertBefore(wrapper, selectEl);
+          wrapper.appendChild(input);
+          wrapper.appendChild(dropdown);
+          selectEl.style.display = "none";
+      
+          const options = Array.from(selectEl.options)
+            .filter((o) => o.value)
+            .map((o) => o.value);
+      
+          function renderDropdown(filtered) {
+            dropdown.innerHTML = "";
+            filtered.forEach((option) => {
+              const item = document.createElement("div");
+              item.textContent = option;
+              item.className = "dropdown-item";
+              item.style.padding = "8px";
+              item.style.cursor = "pointer";
+      
+              item.addEventListener("click", () => {
+                input.value = option;
+                selectEl.value = option;
+                dropdown.style.display = "none";
+              });
+      
+              dropdown.appendChild(item);
+            });
+          }
+      
+          input.addEventListener("input", () => {
+            const val = input.value.toLowerCase();
+            const filtered = options.filter((o) => o.toLowerCase().includes(val));
+            renderDropdown(filtered);
+            dropdown.style.display = filtered.length ? "block" : "none";
+          });
+      
+          input.addEventListener("focus", () => {
+            renderDropdown(options);
+            dropdown.style.display = "block";
+          });
+      
+          document.addEventListener("click", (e) => {
+            if (!wrapper.contains(e.target)) dropdown.style.display = "none";
+          });
+        }
+      
+        document.addEventListener("DOMContentLoaded", () => {
+          document.querySelectorAll("select.searchable").forEach((select) => {
+            makeSearchable(select);
+          });
+        });
+      </script>
+      
+  </head>
+
+  <body>
+    <div class="container">
+      <h1>Smash Ultimate ELO</h1>
+
+      <a href="/leaderboard" class="nav-link">View Leaderboard →</a>
+
+      <!-- Last Match Result -->
+      {% if last and last.get('p1') %}
+      <div class="result-box">
+        <h2>Last Match Result</h2>
+
+        <p>
+          <strong>{{ last['p1'] }} ({{ last['c1'] }})</strong>: {{ last['new1']
+          }} {% if last['diff1'] > 0 %}
+          <span class="green">+{{ last['diff1'] }}</span>
+          {% else %}
+          <span class="red">{{ last['diff1'] }}</span>
+          {% endif %}
+        </p>
+
+        <p>
+          <strong>{{ last['p2'] }} ({{ last['c2'] }})</strong>: {{ last['new2']
+          }} {% if last['diff2'] > 0 %}
+          <span class="green">+{{ last['diff2'] }}</span>
+          {% else %}
+          <span class="red">{{ last['diff2'] }}</span>
+          {% endif %}
+        </p>
+      </div>
+      {% endif %}
+
+      <h2>Record Match</h2>
+      <form action="/add_match" method="POST">
+        <h3>Player 1</h3>
+        <select name="player1" required>
+            <option value="" disabled>Select Player 1</option>
+            {% for p in player_list %}
+              <option value="{{ p }}" {% if p == last_player1 %}selected{% endif %}>
+                {{ p }}
+              </option>
+            {% endfor %}
+          </select>
+          
+          
+
+          <select name="p1_character" required class="searchable">
+            <option value="" disabled>Select Character</option>
+            {% for char in characters %}
+            <option value="{{ char }}" {% if char == last_char1 %}selected{% endif %}>
+              {{ char }}
+            </option>
+            {% endfor %}
+          </select>
+          
+
+        <h3>Player 2</h3>
+        <select name="player2" required>
+            <option value="" disabled>Select Player 2</option>
+            {% for p in player_list %}
+              <option value="{{ p }}" {% if p == last_player2 %}selected{% endif %}>
+                {{ p }}
+              </option>
+            {% endfor %}
+          </select>
+          
+          
+
+          <select name="p2_character" required class="searchable">
+            <option value="" disabled>Select Character</option>
+            {% for char in characters %}
+            <option value="{{ char }}" {% if char == last_char2 %}selected{% endif %}>
+              {{ char }}
+            </option>
+            {% endfor %}
+          </select>
+          
+
+        <h3>Winner</h3>
+        <select name="winner" required>
+          <option value="p1">Player 1 Wins</option>
+          <option value="p2">Player 2 Wins</option>
+        </select>
+
+        <button type="submit">Submit Match</button>
+      </form>
+    </div>
+  </body>
+</html>
