@@ -4,10 +4,21 @@ import os
 
 app = Flask(__name__)
 
-DATA_FILE = "characters.json"
-LAST_RESULT_FILE = "last_result.json"
-MATCH_LOG_FILE = "match_log.json"
+# Detect Render environment
+if os.getenv("RENDER"):
+    DATA_DIR = "/var/data"  # Render persistent disk
+else:
+    DATA_DIR = "."  # Local folder for development
 
+# Ensure the directory exists
+os.makedirs(DATA_DIR, exist_ok=True)
+
+DATA_FILE = f"{DATA_DIR}/characters.json"
+LAST_RESULT_FILE = f"{DATA_DIR}/last_result.json"
+MATCH_LOG_FILE = f"{DATA_DIR}/match_log.json"
+
+
+# run with alias "runelo" in terminal
 
 # -----------------------------
 # Data loading / saving helpers
