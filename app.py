@@ -3,6 +3,7 @@ import json
 import os
 import subprocess
 import threading
+import shutil
 from functools import wraps
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -21,6 +22,8 @@ print(">>> LOADED FLASK APP FROM:", __file__)
 
 
 app = Flask(__name__)
+
+APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 push_queue = []
 is_pushing = False
@@ -111,9 +114,10 @@ def push_to_github_worker():
         commit_message = push_queue.pop(0)
 
         try:
-            subprocess.run(["git", "add", "-u"], check=True)
+            sync_runtime_data_into_repo()
+            subprocess.run(["git", "add", *TRACKED_DATA_FILES.keys()], check=True, cwd=APP_ROOT)
 
-            diff_check = subprocess.run(["git", "diff", "--cached", "--quiet"])
+            diff_check = subprocess.run(["git", "diff", "--cached", "--quiet"], cwd=APP_ROOT)
             if diff_check.returncode == 0:
                 msg = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] No changes to commit ({commit_message})"
                 print(msg)
@@ -122,8 +126,8 @@ def push_to_github_worker():
                     push_log.pop(0)
                 continue
 
-            subprocess.run(["git", "commit", "-m", commit_message], check=True)
-            subprocess.run(["git", "push", "origin", "main"], check=True)
+            subprocess.run(["git", "commit", "-m", commit_message], check=True, cwd=APP_ROOT)
+            subprocess.run(["git", "push", "origin", "main"], check=True, cwd=APP_ROOT)
 
             msg = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Git push successful: {commit_message}"
             print(msg)
@@ -165,6 +169,41 @@ MATCH_LOG_FILE = f"{DATA_DIR}/match_log.json"
 MOMS_HOUSE_FILE = f"{DATA_DIR}/moms_house.json"
 MOMS_HOUSE_LOG_FILE = f"{DATA_DIR}/moms_house_log.json"
 MOMS_HOUSE_LAST_FILE = f"{DATA_DIR}/moms_house_last_result.json"
+
+TRACKED_DATA_FILES = {
+    "characters.json": DATA_FILE,
+    "last_result.json": LAST_RESULT_FILE,
+    "match_log.json": MATCH_LOG_FILE,
+    "moms_house.json": MOMS_HOUSE_FILE,
+    "moms_house_log.json": MOMS_HOUSE_LOG_FILE,
+    "moms_house_last_result.json": MOMS_HOUSE_LAST_FILE,
+}
+
+
+def seed_runtime_data_from_repo():
+    """On Render, initialize /var/data from the tracked repo files once."""
+    if os.path.abspath(DATA_DIR) == APP_ROOT:
+        return
+
+    for filename, runtime_path in TRACKED_DATA_FILES.items():
+        repo_path = os.path.join(APP_ROOT, filename)
+        if os.path.exists(runtime_path) or not os.path.exists(repo_path):
+            continue
+        shutil.copy2(repo_path, runtime_path)
+
+
+def sync_runtime_data_into_repo():
+    """Mirror live runtime JSON files into the git-tracked repo before commit."""
+    for filename, runtime_path in TRACKED_DATA_FILES.items():
+        repo_path = os.path.join(APP_ROOT, filename)
+        if not os.path.exists(runtime_path):
+            continue
+        if os.path.abspath(runtime_path) == repo_path:
+            continue
+        shutil.copy2(runtime_path, repo_path)
+
+
+seed_runtime_data_from_repo()
 
 
 # run with alias "runelo" in terminal
